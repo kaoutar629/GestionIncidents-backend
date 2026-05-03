@@ -44,7 +44,6 @@ public class WebSecurityConfig {
     // ── URL publiques (Auth + Swagger) ────────────────────────
     private static final String[] PUBLIC_URLS = {
             "/api/auth/**",
-            // ✅ Swagger — FIX 500 /v3/api-docs
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html"
@@ -74,7 +73,11 @@ public class WebSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of(allowedOrigins.split(",")));
+        config.setAllowedOriginPatterns(List.of(
+                "https://gestion-incidents-frontend.vercel.app",
+                "https://gestion-incidents-frontend-*-kaoutar629s-projects.vercel.app",
+                "http://localhost:5173"
+        ));
         config.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
