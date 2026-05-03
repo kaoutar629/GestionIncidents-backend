@@ -14,6 +14,7 @@ public class CreateIncidentDto {
     @NotNull
     private String priority;
     private String category;
+    private String status;
     private Long createdById;
     private Long assignedToId;
 
