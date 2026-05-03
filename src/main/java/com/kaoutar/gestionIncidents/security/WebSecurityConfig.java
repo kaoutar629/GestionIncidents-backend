@@ -24,10 +24,11 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
 
 /**
- * ✅ FIXES :
- *  - Swagger UI + api-docs whitelistés (corrige 500 /v3/api-docs)
- *  - CORS configuré pour le frontend Vite (port 5173)
- *  - Injection propre via @RequiredArgsConstructor
+ * ✅ FIXES:
+ *  - Swagger UI + api-docs whitelisted (fixes 500 on /v3/api-docs)
+ *  - CORS: expanded allowed origins to cover all Vercel preview deployments
+ *    and any other frontend origin via ${cors.allowed-origins} env variable
+ *  - Added wildcard pattern for Vercel preview URLs
  */
 @Configuration
 @EnableWebSecurity
@@ -41,7 +42,7 @@ public class WebSecurityConfig {
     @Value("${cors.allowed-origins}")
     private String allowedOrigins;
 
-    // ── URL publiques (Auth + Swagger) ────────────────────────
+    // ── Public URLs (Auth + Swagger) ─────────────────────────────
     private static final String[] PUBLIC_URLS = {
             "/api/auth/**",
             "/v3/api-docs/**",
@@ -68,31 +69,43 @@ public class WebSecurityConfig {
         return http.build();
     }
 
-
-
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of(
-                "https://gestion-incidents-frontend.vercel.app",
-                "https://gestion-incidents-frontend-*-kaoutar629s-projects.vercel.app",
-                "http://localhost:5173"
-        ));
-        config.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
+
+        // ✅ FIX: Build allowed origins list from application.properties env var
+        // + always include the main production Vercel URL and all preview URLs
+        List<String> origins = new java.util.ArrayList<>();
+
+        // Add origins from config (comma-separated)
+        if (allowedOrigins != null && !allowedOrigins.isBlank()) {
+            for (String origin : allowedOrigins.split(",")) {
+                origins.add(origin.trim());
+            }
+        }
+
+        // Always include these production origins
+        origins.add("https://gestion-incidents-frontend.vercel.app");
+        // Wildcard pattern covers ALL Vercel preview deployments
+        origins.add("https://gestion-incidents-frontend-*.vercel.app");
+        origins.add("http://localhost:5173");
+        origins.add("http://localhost:5174");
+        origins.add("http://localhost:3000");
+
+        config.setAllowedOriginPatterns(origins);
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
     }
 
-
-
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
         provider.setUserDetailsService(userDetailsService);
-
         provider.setPasswordEncoder(passwordEncoder());
         return provider;
     }
